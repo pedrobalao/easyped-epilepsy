@@ -8,24 +8,34 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
 const router = express_1.default.Router();
-// Register
+// Register (supports both email/password and Firebase social auth)
 router.post("/register", async (req, res) => {
     try {
-        const { email, password, name, role } = req.body;
+        const { email, password, name, role, firebaseUid, authProvider } = req.body;
         // Check if user already exists
-        const existingUser = await User_1.User.findOne({ email });
+        const existingUser = await User_1.User.findOne({
+            $or: [
+                { email },
+                ...(firebaseUid ? [{ firebaseUid }] : [])
+            ]
+        });
         if (existingUser) {
             return res.status(400).json({ message: "User already exists" });
         }
-        // Hash password
-        const saltRounds = 12;
-        const hashedPassword = await bcryptjs_1.default.hash(password, saltRounds);
+        let hashedPassword;
+        if (password) {
+            // Hash password for email/password registration
+            const saltRounds = 12;
+            hashedPassword = await bcryptjs_1.default.hash(password, saltRounds);
+        }
         // Create user
         const user = new User_1.User({
             email,
             password: hashedPassword,
             name,
             role,
+            firebaseUid,
+            authProvider: authProvider || "email",
         });
         await user.save();
         // Generate JWT token
@@ -38,6 +48,7 @@ router.post("/register", async (req, res) => {
                 email: user.email,
                 name: user.name,
                 role: user.role,
+                authProvider: user.authProvider,
             },
         });
     }
@@ -46,18 +57,31 @@ router.post("/register", async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
-// Login
+// Login (supports both email/password and Firebase UID)
 router.post("/login", async (req, res) => {
     try {
-        const { email, password } = req.body;
-        // Find user
-        const user = await User_1.User.findOne({ email });
+        const { email, password, firebaseUid } = req.body;
+        let user;
+        if (firebaseUid) {
+            // Firebase authentication - find user by firebaseUid
+            user = await User_1.User.findOne({ firebaseUid });
+        }
+        else {
+            // Email/password authentication
+            user = await User_1.User.findOne({ email });
+        }
         if (!user) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
-        // Check password
-        const isPasswordValid = await bcryptjs_1.default.compare(password, user.password);
-        if (!isPasswordValid) {
+        // For email/password authentication, verify password
+        if (password && user.password) {
+            const isPasswordValid = await bcryptjs_1.default.compare(password, user.password);
+            if (!isPasswordValid) {
+                return res.status(401).json({ message: "Invalid credentials" });
+            }
+        }
+        else if (!firebaseUid) {
+            // If no Firebase UID and no password verification, reject
             return res.status(401).json({ message: "Invalid credentials" });
         }
         // Generate JWT token
@@ -70,6 +94,7 @@ router.post("/login", async (req, res) => {
                 email: user.email,
                 name: user.name,
                 role: user.role,
+                authProvider: user.authProvider,
             },
         });
     }

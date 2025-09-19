@@ -5,20 +5,26 @@ import { User } from "../models/User";
 
 const router = express.Router();
 
-// Register
+// Register (supports both email/password and Firebase social auth)
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, name, role } = req.body;
+    const { email, password, name, role, firebaseUid, authProvider } = req.body;
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      $or: [{ email }, ...(firebaseUid ? [{ firebaseUid }] : [])],
+    });
+
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Hash password
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    let hashedPassword;
+    if (password) {
+      // Hash password for email/password registration
+      const saltRounds = 12;
+      hashedPassword = await bcrypt.hash(password, saltRounds);
+    }
 
     // Create user
     const user = new User({
@@ -26,6 +32,8 @@ router.post("/register", async (req, res) => {
       password: hashedPassword,
       name,
       role,
+      firebaseUid,
+      authProvider: authProvider || "email",
     });
 
     await user.save();
@@ -45,6 +53,7 @@ router.post("/register", async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        authProvider: user.authProvider,
       },
     });
   } catch (error) {
@@ -53,20 +62,33 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Login
+// Login (supports both email/password and Firebase UID)
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, firebaseUid } = req.body;
 
-    // Find user
-    const user = await User.findOne({ email });
+    let user;
+
+    if (firebaseUid) {
+      // Firebase authentication - find user by firebaseUid
+      user = await User.findOne({ firebaseUid });
+    } else {
+      // Email/password authentication
+      user = await User.findOne({ email });
+    }
+
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
+    // For email/password authentication, verify password
+    if (password && user.password) {
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+    } else if (!firebaseUid) {
+      // If no Firebase UID and no password verification, reject
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -85,6 +107,7 @@ router.post("/login", async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        authProvider: user.authProvider,
       },
     });
   } catch (error) {

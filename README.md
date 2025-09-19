@@ -4,19 +4,20 @@ A comprehensive web application that allows doctors and parents to input patient
 
 ## Features
 
-- **User Management**: Firebase authentication for doctors and parents
+- **User Management**: Firebase authentication with email/password, Google, and Apple sign-in
 - **Patient Information**: Comprehensive patient profiles including medical history, medications, and emergency contacts
 - **QR Code Generation**: Unique QR codes for each patient that link to emergency treatment information
 - **Emergency Access**: Public access to patient information via QR code for first responders
 - **Role-based Access**: Different permissions for medical professionals and family members
 - **Mobile Responsive**: Optimized for mobile devices for emergency situations
+- **Social Authentication**: Sign in with Google or Apple for quick access
 
 ## Tech Stack
 
 ### Frontend
 
 - **Next.js 15** with App Router and TypeScript
-- **Firebase Authentication** for user management
+- **Firebase Authentication** with social providers (Google, Apple)
 - **Tailwind CSS** for styling
 - **React Hook Form** with Yup validation
 - **react-qr-code** for QR code display
@@ -26,6 +27,7 @@ A comprehensive web application that allows doctors and parents to input patient
 - **Node.js** with Express and TypeScript
 - **MongoDB** with Mongoose ODM
 - **JWT** for API authentication
+- **Firebase Integration** for social authentication
 - **QR Code generation** with automatic URL linking
 
 ## Quick Start
@@ -76,10 +78,20 @@ A comprehensive web application that allows doctors and parents to input patient
    NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
    NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-   # Add other Firebase config variables
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+   NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
    ```
 
-4. **Start the development servers**
+4. **Firebase Setup**
+
+   For Google and Apple authentication to work, you need to configure Firebase:
+
+   - See [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) for detailed Firebase configuration instructions
+   - Set up Google and Apple authentication providers
+   - Update the environment variables with your actual Firebase config
+
+5. **Start the development servers**
 
    **Backend** (Terminal 1)
 
@@ -95,7 +107,7 @@ A comprehensive web application that allows doctors and parents to input patient
    npm run dev
    ```
 
-5. **Access the application**
+6. **Access the application**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:3001
 

@@ -2,9 +2,11 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface IUser extends Document {
   email: string;
-  password: string;
+  password?: string; // Optional for Firebase social auth users
   name: string;
   role: "doctor" | "parent";
+  firebaseUid?: string; // Firebase UID for social auth
+  authProvider: "email" | "google" | "apple"; // Track auth provider
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,7 +22,7 @@ const userSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: true,
+      required: false, // Not required for social auth
       minlength: 6,
     },
     name: {
@@ -32,6 +34,18 @@ const userSchema = new Schema<IUser>(
       type: String,
       enum: ["doctor", "parent"],
       required: true,
+    },
+    firebaseUid: {
+      type: String,
+      required: false,
+      unique: true,
+      sparse: true, // Allow null values but ensure uniqueness when present
+    },
+    authProvider: {
+      type: String,
+      enum: ["email", "google", "apple"],
+      required: true,
+      default: "email",
     },
   },
   {

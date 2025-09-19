@@ -1,9 +1,11 @@
 import mongoose, { Document } from "mongoose";
 export interface IUser extends Document {
     email: string;
-    password: string;
+    password?: string;
     name: string;
     role: "doctor" | "parent";
+    firebaseUid?: string;
+    authProvider: "email" | "google" | "apple";
     createdAt: Date;
     updatedAt: Date;
 }

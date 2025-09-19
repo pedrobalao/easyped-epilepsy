@@ -9,16 +9,21 @@ const router = express.Router();
 // Create a new patient
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const {
-      name,
-      dateOfBirth,
-      medicalConditions,
-      medications,
-      emergencyContacts,
-      allergies,
-      seizureHistory,
-      emergencyInstructions,
-    } = req.body;
+    const { name, age, bloodType, emergencyContacts, observations } = req.body;
+
+    // Validate required fields
+    if (
+      !name ||
+      !age ||
+      !bloodType ||
+      !emergencyContacts ||
+      emergencyContacts.length === 0
+    ) {
+      return res.status(400).json({
+        message:
+          "Name, age, blood type, and at least one emergency contact are required",
+      });
+    }
 
     // Generate unique QR code identifier
     const qrCodeId = randomUUID();
@@ -26,13 +31,10 @@ router.post("/", authMiddleware, async (req, res) => {
     // Create patient
     const patient = new Patient({
       name,
-      dateOfBirth,
-      medicalConditions,
-      medications,
+      age,
+      bloodType,
       emergencyContacts,
-      allergies,
-      seizureHistory,
-      emergencyInstructions,
+      observations,
       qrCode: qrCodeId,
       createdBy: (req as AuthRequest).user.userId,
     });
@@ -42,7 +44,7 @@ router.post("/", authMiddleware, async (req, res) => {
     // Generate QR code URL that points to the public patient info page
     const qrCodeUrl = `${
       process.env.FRONTEND_URL || "http://localhost:3000"
-    }/patient/${qrCodeId}`;
+    }/emergency/${qrCodeId}`;
     const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl);
 
     res.status(201).json({
@@ -112,9 +114,7 @@ router.get("/qr/:qrCode", async (req, res) => {
     const patient = await Patient.findOne({
       qrCode: req.params.qrCode,
       isActive: true,
-    }).select(
-      "name dateOfBirth medicalConditions medications emergencyContacts allergies seizureHistory emergencyInstructions"
-    );
+    }).select("name age bloodType emergencyContacts observations");
 
     if (!patient) {
       return res.status(404).json({ message: "Patient not found" });

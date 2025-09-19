@@ -45,7 +45,7 @@ const userSchema = new mongoose_1.Schema({
     },
     password: {
         type: String,
-        required: true,
+        required: false, // Not required for social auth
         minlength: 6,
     },
     name: {
@@ -57,6 +57,18 @@ const userSchema = new mongoose_1.Schema({
         type: String,
         enum: ["doctor", "parent"],
         required: true,
+    },
+    firebaseUid: {
+        type: String,
+        required: false,
+        unique: true,
+        sparse: true, // Allow null values but ensure uniqueness when present
+    },
+    authProvider: {
+        type: String,
+        enum: ["email", "google", "apple"],
+        required: true,
+        default: "email",
     },
 }, {
     timestamps: true,
